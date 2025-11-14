@@ -1,0 +1,1 @@
+drop table if exists pull_requests;
