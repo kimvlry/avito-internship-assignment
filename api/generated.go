@@ -29,12 +29,14 @@ const (
 
 // Defines values for ErrorResponseErrorCode.
 const (
-	NOCANDIDATE ErrorResponseErrorCode = "NO_CANDIDATE"
-	NOTASSIGNED ErrorResponseErrorCode = "NOT_ASSIGNED"
-	NOTFOUND    ErrorResponseErrorCode = "NOT_FOUND"
-	PREXISTS    ErrorResponseErrorCode = "PR_EXISTS"
-	PRMERGED    ErrorResponseErrorCode = "PR_MERGED"
-	TEAMEXISTS  ErrorResponseErrorCode = "TEAM_EXISTS"
+	BADREQUEST          ErrorResponseErrorCode = "BAD_REQUEST"
+	INTERNALSERVERERROR ErrorResponseErrorCode = "INTERNAL_SERVER_ERROR"
+	NOCANDIDATE         ErrorResponseErrorCode = "NO_CANDIDATE"
+	NOTASSIGNED         ErrorResponseErrorCode = "NOT_ASSIGNED"
+	NOTFOUND            ErrorResponseErrorCode = "NOT_FOUND"
+	PREXISTS            ErrorResponseErrorCode = "PR_EXISTS"
+	PRMERGED            ErrorResponseErrorCode = "PR_MERGED"
+	TEAMEXISTS          ErrorResponseErrorCode = "TEAM_EXISTS"
 )
 
 // Defines values for PullRequestStatus.
@@ -579,6 +581,15 @@ func (response PostPullRequestCreate201JSONResponse) VisitPostPullRequestCreateR
 	return json.NewEncoder(w).Encode(response)
 }
 
+type PostPullRequestCreate400JSONResponse ErrorResponse
+
+func (response PostPullRequestCreate400JSONResponse) VisitPostPullRequestCreateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type PostPullRequestCreate404JSONResponse ErrorResponse
 
 func (response PostPullRequestCreate404JSONResponse) VisitPostPullRequestCreateResponse(w http.ResponseWriter) error {
@@ -593,6 +604,15 @@ type PostPullRequestCreate409JSONResponse ErrorResponse
 func (response PostPullRequestCreate409JSONResponse) VisitPostPullRequestCreateResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostPullRequestCreate500JSONResponse ErrorResponse
+
+func (response PostPullRequestCreate500JSONResponse) VisitPostPullRequestCreateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -621,6 +641,15 @@ type PostPullRequestMerge404JSONResponse ErrorResponse
 func (response PostPullRequestMerge404JSONResponse) VisitPostPullRequestMergeResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostPullRequestMerge500JSONResponse ErrorResponse
+
+func (response PostPullRequestMerge500JSONResponse) VisitPostPullRequestMergeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -665,6 +694,15 @@ func (response PostPullRequestReassign409JSONResponse) VisitPostPullRequestReass
 	return json.NewEncoder(w).Encode(response)
 }
 
+type PostPullRequestReassign500JSONResponse ErrorResponse
+
+func (response PostPullRequestReassign500JSONResponse) VisitPostPullRequestReassignResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type PostTeamAddRequestObject struct {
 	Body *PostTeamAddJSONRequestBody
 }
@@ -689,6 +727,24 @@ type PostTeamAdd400JSONResponse ErrorResponse
 func (response PostTeamAdd400JSONResponse) VisitPostTeamAddResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostTeamAdd409JSONResponse ErrorResponse
+
+func (response PostTeamAdd409JSONResponse) VisitPostTeamAddResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostTeamAdd500JSONResponse ErrorResponse
+
+func (response PostTeamAdd500JSONResponse) VisitPostTeamAddResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -719,6 +775,15 @@ func (response GetTeamGet404JSONResponse) VisitGetTeamGetResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetTeamGet500JSONResponse ErrorResponse
+
+func (response GetTeamGet500JSONResponse) VisitGetTeamGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetUsersGetReviewRequestObject struct {
 	Params GetUsersGetReviewParams
 }
@@ -735,6 +800,15 @@ type GetUsersGetReview200JSONResponse struct {
 func (response GetUsersGetReview200JSONResponse) VisitGetUsersGetReviewResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetUsersGetReview500JSONResponse ErrorResponse
+
+func (response GetUsersGetReview500JSONResponse) VisitGetUsersGetReviewResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -772,6 +846,15 @@ type PostUsersSetIsActive404JSONResponse ErrorResponse
 func (response PostUsersSetIsActive404JSONResponse) VisitPostUsersSetIsActiveResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostUsersSetIsActive500JSONResponse ErrorResponse
+
+func (response PostUsersSetIsActive500JSONResponse) VisitPostUsersSetIsActiveResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -1040,43 +1123,46 @@ func (sh *strictHandler) PostUsersSetIsActive(w http.ResponseWriter, r *http.Req
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"pK211n8DAAD//0/a4somMAAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

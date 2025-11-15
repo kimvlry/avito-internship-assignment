@@ -43,6 +43,8 @@ components:
                 - NOT_ASSIGNED
                 - NO_CANDIDATE
                 - NOT_FOUND
+                - INTERNAL_SERVER_ERROR
+                - BAD_REQUEST
             message:
               type: string
       example:
@@ -162,6 +164,15 @@ paths:
                       username: Bob
                       is_active: true
         '400':
+          description: Невалидные данные запроса
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: BAD_REQUEST
+                  message: team_name is empty
+        '409':
           description: Команда уже существует
           content:
             application/json:
@@ -170,6 +181,15 @@ paths:
                 error:
                   code: TEAM_EXISTS
                   message: team_name already exists
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: internal server error
 
   /team/get:
     get:
@@ -201,6 +221,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: internal server error
 
   /users/setIsActive:
     post:
@@ -249,6 +278,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: internal server error
 
   /pullRequest/create:
     post:
@@ -288,6 +326,15 @@ paths:
                   author_id: u1
                   status: OPEN
                   assigned_reviewers: [u2, u3]
+        '400':
+          description: Невалидные данные запроса
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: BAD_REQUEST
+                  message: pull_request_name is empty
         '404':
           description: Автор/команда не найдены
           content:
@@ -300,6 +347,15 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               example:
                 error: { code: PR_EXISTS, message: PR id already exists }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: internal server error
 
   /pullRequest/merge:
     post:
@@ -341,6 +397,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: internal server error
 
   /pullRequest/reassign:
     post:
@@ -406,6 +471,15 @@ paths:
                   summary: Нет доступных кандидатов
                   value:
                     error: { code: NO_CANDIDATE, message: no active replacement candidate in team }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: internal server error
 
   /users/getReview:
     get:
@@ -438,3 +512,12 @@ paths:
                     pull_request_name: Add search
                     author_id: u1
                     status: OPEN
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: internal server error
