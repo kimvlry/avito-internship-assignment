@@ -1,8 +1,13 @@
+version: "2"
+
 linters:
   disable-all: true
   enable:
     - govet
     - staticcheck
-    - gosimple
     - errcheck
     - ineffassign
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
