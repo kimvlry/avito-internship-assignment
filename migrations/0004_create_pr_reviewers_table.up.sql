@@ -16,18 +16,3 @@ create table if not exists pull_request_reviewers (
 );
 
 comment on constraint fk_pr_pr on pull_request_reviewers is 'CASCADE: when PR deleted, remove reviewer assignments';
-
-create or replace function check_max_reviewers()
-returns trigger as $$
-    begin
-        if (select count(*) from pull_request_reviewers where pull_request_id = new.pull_request_id) >= 2 then
-            raise exception 'cannot assign more than 2 reviewers to a pull request';
-        end if;
-        return new;
-    end;
-    $$ language plpgsql;
-
-create trigger trg_check_max_reviewers
-    before insert on pull_request_reviewers
-    for each row
-    execute function check_max_reviewers()

@@ -9,8 +9,5 @@ create table if not exists pull_requests (
     constraint fk_pull_request_author
         foreign key (author_id)
         references users(user_id)
-        on delete restrict,
-
-    constraint chk_pr_status
-        check (status in ('OPEN', 'MERGED'))
+        on delete restrict
 );
