@@ -6,20 +6,19 @@ import (
     "github.com/kimvlry/avito-internship-assignment/internal/domain"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/entity"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
-    "github.com/kimvlry/avito-internship-assignment/internal/infrastructure"
     "time"
 )
 
 type PullRequestService struct {
     prRepository   repository.PullRequestRepository
     userRepository repository.UserRepository
-    tx             infrastructure.Transactor
+    tx             Transactor
 }
 
 func NewPullRequestService(
     prRepo repository.PullRequestRepository,
     userRepo repository.UserRepository,
-    tx infrastructure.Transactor,
+    tx Transactor,
 ) *PullRequestService {
     return &PullRequestService{
         prRepository:   prRepo,

@@ -1,0 +1,246 @@
+package postgres
+
+import (
+    "context"
+    "errors"
+    "fmt"
+    "github.com/jackc/pgx/v5"
+
+    "github.com/kimvlry/avito-internship-assignment/internal/domain/entity"
+    "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
+)
+
+type pullRequestRepository struct {
+    db *DB
+}
+
+func NewPullRequestRepository(db *DB) repository.PullRequestRepository {
+    return &pullRequestRepository{db: db}
+}
+
+func (r *pullRequestRepository) CreateWithReviewers(
+    ctx context.Context,
+    pr *entity.PullRequest,
+) error {
+    query := `
+		WITH inserted_pr AS (
+			INSERT INTO pull_requests (pull_request_id, pull_request_name, author_id, status, created_at)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING pull_request_id
+		)
+		INSERT INTO pr_reviewers (pull_request_id, reviewer_id, assigned_at)
+		SELECT inserted_pr.pull_request_id, unnest($6::text[]), $7
+		FROM inserted_pr
+	`
+
+    querier := r.db.GetQuerier(ctx)
+
+    _, err := querier.Exec(ctx, query,
+        pr.ID,
+        pr.Name,
+        pr.AuthorID,
+        pr.Status,
+        pr.CreatedAt,
+        pr.AssignedReviewers,
+        pr.CreatedAt,
+    )
+
+    if err != nil {
+        if isPgUniqueViolation(err) {
+            return ErrPullRequestAlreadyExists
+        }
+        if isPgForeignKeyViolation(err) {
+            return ErrUserNotFound
+        }
+        if isPgCheckViolation(err) {
+            return ErrTooManyReviewers
+        }
+        return fmt.Errorf("exec create pr with reviewers: %w", err)
+    }
+    return nil
+}
+
+func (r *pullRequestRepository) GetByID(
+    ctx context.Context,
+    id string,
+) (*entity.PullRequest, error) {
+    query := `
+		SELECT 
+			pr.pull_request_id,
+			pr.pull_request_name,
+			pr.author_id,
+			pr.status,
+			pr.created_at,
+			pr.merged_at,
+			COALESCE(
+				array_agg(prr.reviewer_id) 
+				FILTER (WHERE prr.reviewer_id IS NOT NULL), 
+				'{}'
+			) as reviewers
+		FROM pull_requests pr
+		LEFT JOIN pull_request_reviewers prr ON pr.pull_request_id = prr.pull_request_id
+		WHERE pr.pull_request_id = $1
+		GROUP BY pr.pull_request_id
+	`
+
+    querier := r.db.GetQuerier(ctx)
+
+    var pr entity.PullRequest
+    err := querier.QueryRow(ctx, query, id).Scan(
+        &pr.ID,
+        &pr.Name,
+        &pr.AuthorID,
+        &pr.Status,
+        &pr.CreatedAt,
+        &pr.MergedAt,
+        &pr.AssignedReviewers,
+    )
+
+    if err != nil {
+        if errors.Is(err, pgx.ErrNoRows) {
+            return nil, ErrPullRequestNotFound
+        }
+        return nil, fmt.Errorf("query pr by id: %w", err)
+    }
+    return &pr, nil
+}
+
+func (r *pullRequestRepository) Exists(ctx context.Context, id string) (bool, error) {
+    query := `
+		SELECT EXISTS(
+			SELECT 1 FROM pull_requests WHERE pull_request_id = $1
+		)
+	`
+
+    querier := r.db.GetQuerier(ctx)
+
+    var exists bool
+    err := querier.QueryRow(ctx, query, id).Scan(&exists)
+    if err != nil {
+        return false, fmt.Errorf("check pr exists: %w", err)
+    }
+
+    return exists, nil
+}
+
+func (r *pullRequestRepository) UpdateStatus(
+    ctx context.Context,
+    prID string,
+    status entity.PullRequestStatus,
+) error {
+    query := `
+		UPDATE pull_requests
+		SET status = $2, merged_at = CASE WHEN $2 = 'MERGED' THEN NOW() ELSE merged_at END
+		WHERE pull_request_id = $1
+	`
+
+    querier := r.db.GetQuerier(ctx)
+
+    result, err := querier.Exec(ctx, query, prID, status)
+    if err != nil {
+        return fmt.Errorf("exec update pr status: %w", err)
+    }
+
+    if result.RowsAffected() == 0 {
+        return ErrPullRequestNotFound
+    }
+
+    return nil
+}
+
+func (r *pullRequestRepository) ReplaceReviewer(
+    ctx context.Context,
+    prID, oldUserID, newUserID string,
+) error {
+    query := `
+		WITH deleted AS (
+			DELETE FROM pr_reviewers
+			WHERE pull_request_id = $1 AND reviewer_id = $2
+			RETURNING pull_request_id
+		)
+		INSERT INTO pr_reviewers (pull_request_id, reviewer_id, assigned_at)
+		SELECT pull_request_id, $3, NOW()
+		FROM deleted
+	`
+
+    querier := r.db.GetQuerier(ctx)
+
+    result, err := querier.Exec(ctx, query, prID, oldUserID, newUserID)
+    if err != nil {
+        if isPgCheckViolation(err) {
+            return ErrTooManyReviewers
+        }
+        if isPgForeignKeyViolation(err) {
+            return ErrUserNotFound
+        }
+        return fmt.Errorf("exec replace reviewer: %w", err)
+    }
+
+    if result.RowsAffected() == 0 {
+        return ErrReviewerNotAssigned
+    }
+
+    return nil
+}
+
+func (r *pullRequestRepository) GetByReviewer(
+    ctx context.Context,
+    userID string,
+) ([]*entity.PullRequest, error) {
+    query := `
+		SELECT 
+			pr.pull_request_id,
+			pr.pull_request_name,
+			pr.author_id,
+			pr.status,
+			pr.created_at,
+			pr.merged_at,
+			array_agg(prr.reviewer_id) as reviewers
+		FROM pull_requests pr
+		JOIN pull_request_reviewers prr ON pr.pull_request_id = prr.pull_request_id
+		WHERE EXISTS (
+			SELECT 1
+			FROM pull_request_reviewers prr2
+			WHERE prr2.pull_request_id = pr.pull_request_id
+			  AND prr2.reviewer_id = $1
+		)
+		GROUP BY pr.pull_request_id
+	`
+
+    querier := r.db.GetQuerier(ctx)
+
+    rows, err := querier.Query(ctx, query, userID)
+    if err != nil {
+        return nil, fmt.Errorf("query prs by reviewer: %w", err)
+    }
+    defer rows.Close()
+
+    return scanPullRequests(rows)
+}
+
+func scanPullRequests(rows pgx.Rows) ([]*entity.PullRequest, error) {
+    var prs []*entity.PullRequest
+
+    for rows.Next() {
+        var pr entity.PullRequest
+        err := rows.Scan(
+            &pr.ID,
+            &pr.Name,
+            &pr.AuthorID,
+            &pr.Status,
+            &pr.CreatedAt,
+            &pr.MergedAt,
+            &pr.AssignedReviewers,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("scan pr: %w", err)
+        }
+        prs = append(prs, &pr)
+    }
+
+    if err := rows.Err(); err != nil {
+        return nil, fmt.Errorf("rows error: %w", err)
+    }
+
+    return prs, nil
+}

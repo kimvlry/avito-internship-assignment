@@ -6,17 +6,16 @@ import (
     "github.com/kimvlry/avito-internship-assignment/internal/domain"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/entity"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
-    "github.com/kimvlry/avito-internship-assignment/internal/infrastructure"
 )
 
 type TeamService struct {
     teamRepository repository.TeamRepository
     userRepository repository.UserRepository
-    tx             infrastructure.Transactor
+    tx             Transactor
 }
 
 func NewTeamService(teamRepo repository.TeamRepository, userRepo repository.UserRepository,
-    tx infrastructure.Transactor) *TeamService {
+    tx Transactor) *TeamService {
     return &TeamService{
         teamRepository: teamRepo,
         userRepository: userRepo,
