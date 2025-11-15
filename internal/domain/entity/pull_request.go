@@ -19,10 +19,7 @@ type PullRequest struct {
     MergedAt          *time.Time
 }
 
-func (p *PullRequest) Merge() error {
-    if p.Status == PRMerged {
-        return nil
-    }
+func (p *PullRequest) SetMerged() error {
     now := time.Now()
     p.Status = PRMerged
     p.MergedAt = &now
