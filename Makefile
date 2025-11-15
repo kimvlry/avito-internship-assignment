@@ -1,4 +1,7 @@
-.PHONY: generate
+.PHONY: test
+test:
+	go test -v ./internal/domain/service/...
+
 generate:
 	@echo "Generating code from OpenAPI spec..."
 	oapi-codegen -config api/oapi-codegen.yaml api/openapi.yaml

@@ -8,7 +8,9 @@ func (e Error) Error() string {
 
 const (
     ErrUserNotFound             Error = "user not found"
+    ErrTeamNotFound             Error = "team not found"
     ErrTeamAlreadyExists        Error = "team already exists"
+    ErrPullRequestNotFound      Error = "pull request not found"
     ErrPullRequestAlreadyExists Error = "pull request already exists"
     ErrNoReviewerCandidate      Error = "no reviewer candidate available"
     ErrPullRequestIsMerged      Error = "pull request is merged"
