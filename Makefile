@@ -1,6 +1,14 @@
-.PHONY: test
+INTEGRATION_LOGS ?= 0
+
+.PHONY: test repositories_integration_test
 test:
-	go test -v -cover ./internal/domain/service/...
+	@echo "Running all tests..."
+	@INTEGRATION_LOGS=0 go test -v -cover ./...
+
+repositories_integration_test:
+	@echo "Running integration tests for Postgres repos with logs..."
+	@INTEGRATION_LOGS=1 go test -v -cover ./internal/infrastructure/postgres/...
+
 
 generate:
 	@echo "Generating code from OpenAPI spec..."

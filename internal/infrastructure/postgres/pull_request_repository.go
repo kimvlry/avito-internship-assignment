@@ -28,8 +28,8 @@ func (r *pullRequestRepository) CreateWithReviewers(
 			VALUES ($1, $2, $3, $4, $5)
 			RETURNING pull_request_id
 		)
-		INSERT INTO pr_reviewers (pull_request_id, reviewer_id, assigned_at)
-		SELECT inserted_pr.pull_request_id, unnest($6::text[]), $7
+		INSERT INTO pull_request_reviewers (pull_request_id, reviewer_id)
+		SELECT inserted_pr.pull_request_id, unnest($6::text[])
 		FROM inserted_pr
 	`
 
@@ -42,7 +42,6 @@ func (r *pullRequestRepository) CreateWithReviewers(
         pr.Status,
         pr.CreatedAt,
         pr.AssignedReviewers,
-        pr.CreatedAt,
     )
 
     if err != nil {
@@ -129,14 +128,15 @@ func (r *pullRequestRepository) UpdateStatus(
     status entity.PullRequestStatus,
 ) error {
     query := `
-		UPDATE pull_requests
-		SET status = $2, merged_at = CASE WHEN $2 = 'MERGED' THEN NOW() ELSE merged_at END
-		WHERE pull_request_id = $1
-	`
+        UPDATE pull_requests
+        SET status = $2::varchar, 
+            merged_at = CASE WHEN $2::varchar = 'MERGED' THEN NOW() ELSE merged_at END
+        WHERE pull_request_id = $1
+    `
 
     querier := r.db.GetQuerier(ctx)
 
-    result, err := querier.Exec(ctx, query, prID, status)
+    result, err := querier.Exec(ctx, query, prID, string(status))
     if err != nil {
         return fmt.Errorf("exec update pr status: %w", err)
     }
@@ -154,12 +154,12 @@ func (r *pullRequestRepository) ReplaceReviewer(
 ) error {
     query := `
 		WITH deleted AS (
-			DELETE FROM pr_reviewers
+			DELETE FROM pull_request_reviewers
 			WHERE pull_request_id = $1 AND reviewer_id = $2
 			RETURNING pull_request_id
 		)
-		INSERT INTO pr_reviewers (pull_request_id, reviewer_id, assigned_at)
-		SELECT pull_request_id, $3, NOW()
+		INSERT INTO pull_request_reviewers (pull_request_id, reviewer_id)
+		SELECT pull_request_id, $3
 		FROM deleted
 	`
 

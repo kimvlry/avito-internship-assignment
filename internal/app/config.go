@@ -37,7 +37,7 @@ func LoadConfig() (*Config, error) {
 
 func (p PostgresConfig) GetConnString() string {
     return fmt.Sprintf(
-        "postgresql://%s:%s@%s:%s/%s?sslmode=%s",
+        "postgres://%s:%s@%s:%s/%s?sslmode=%s",
         p.User, p.Password, p.Host, p.Port, p.DBName, p.SSLMode,
     )
 }
