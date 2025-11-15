@@ -2,6 +2,6 @@ pre-commit:
   parallel: true
   commands:
     lint:
-      run: golangci-lint run --fix
+      run: golangci-lint run
       glob: "*.go"
       skip_empty: true
