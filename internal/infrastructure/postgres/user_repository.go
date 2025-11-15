@@ -121,25 +121,30 @@ func (r *userRepository) GetByTeam(ctx context.Context, teamName string) ([]enti
     return scanUsers(rows)
 }
 
-func (r *userRepository) SetIsActive(ctx context.Context, id string, isActive bool) error {
+func (r *userRepository) SetIsActive(ctx context.Context, id string, isActive bool) (*entity.User, error) {
     query := `
 		UPDATE users
 		SET is_active = $2
 		WHERE user_id = $1
+		RETURNING user_id, username, team_name, is_active
 	`
 
+    var u entity.User
     querier := r.db.GetQuerier(ctx)
 
-    result, err := querier.Exec(ctx, query, id, isActive)
+    err := querier.QueryRow(ctx, query, id).Scan(
+        &u.ID,
+        &u.Username,
+        &u.TeamName,
+        &isActive,
+    )
     if err != nil {
-        return fmt.Errorf("exec set is_active: %w", err)
+        if errors.Is(err, pgx.ErrNoRows) {
+            return nil, ErrUserNotFound
+        }
+        return nil, fmt.Errorf("exec set is_active: %w", err)
     }
-
-    if result.RowsAffected() == 0 {
-        return ErrUserNotFound
-    }
-
-    return nil
+    return &u, nil
 }
 
 func (r *userRepository) Exists(ctx context.Context, id string) (bool, error) {
