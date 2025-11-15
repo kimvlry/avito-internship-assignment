@@ -109,7 +109,7 @@ func TestTeamService_CreateTeam(t *testing.T) {
 
             mockTx := &MockTransactor{}
 
-            svc := NewTeamService(mockTeamRepo, mockUserRepo, mockTx)
+            svc := NewTeam(mockTeamRepo, mockUserRepo, mockTx)
 
             team, err := svc.CreateTeam(ctx, tt.team, tt.members)
 
@@ -191,7 +191,7 @@ func TestTeamService_GetTeamWithMembers(t *testing.T) {
 
             mockTx := &MockTransactor{}
 
-            svc := NewTeamService(mockTeamRepo, mockUserRepo, mockTx)
+            svc := NewTeam(mockTeamRepo, mockUserRepo, mockTx)
 
             team, members, err := svc.GetTeamWithMembers(ctx, tt.teamName)
 

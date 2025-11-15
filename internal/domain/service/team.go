@@ -8,22 +8,22 @@ import (
     "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
 )
 
-type TeamService struct {
+type Team struct {
     teamRepository repository.TeamRepository
     userRepository repository.UserRepository
     tx             Transactor
 }
 
-func NewTeamService(teamRepo repository.TeamRepository, userRepo repository.UserRepository,
-    tx Transactor) *TeamService {
-    return &TeamService{
+func NewTeam(teamRepo repository.TeamRepository, userRepo repository.UserRepository,
+    tx Transactor) *Team {
+    return &Team{
         teamRepository: teamRepo,
         userRepository: userRepo,
         tx:             tx,
     }
 }
 
-func (s *TeamService) CreateTeam(ctx context.Context, team *entity.Team, members []entity.User) (*entity.Team, error) {
+func (s *Team) CreateTeam(ctx context.Context, team *entity.Team, members []entity.User) (*entity.Team, error) {
     userIDs := make([]string, len(members))
     for i, member := range members {
         userIDs[i] = member.ID
@@ -74,7 +74,7 @@ func (s *TeamService) CreateTeam(ctx context.Context, team *entity.Team, members
     return team, nil
 }
 
-func (s *TeamService) GetTeamWithMembers(ctx context.Context, teamName string) (*entity.Team, []entity.User, error) {
+func (s *Team) GetTeamWithMembers(ctx context.Context, teamName string) (*entity.Team, []entity.User, error) {
     team, err := s.teamRepository.GetByName(ctx, teamName)
     if err != nil {
         return nil, nil, fmt.Errorf("get team: %w", err)

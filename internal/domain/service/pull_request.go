@@ -9,25 +9,25 @@ import (
     "time"
 )
 
-type PullRequestService struct {
+type PullRequest struct {
     prRepository   repository.PullRequestRepository
     userRepository repository.UserRepository
     tx             Transactor
 }
 
-func NewPullRequestService(
+func NewPullRequest(
     prRepo repository.PullRequestRepository,
     userRepo repository.UserRepository,
     tx Transactor,
-) *PullRequestService {
-    return &PullRequestService{
+) *PullRequest {
+    return &PullRequest{
         prRepository:   prRepo,
         userRepository: userRepo,
         tx:             tx,
     }
 }
 
-func (s *PullRequestService) CreatePullRequestWithReviewers(
+func (s *PullRequest) CreatePullRequestWithReviewers(
     ctx context.Context,
     prId,
     prName,
@@ -81,7 +81,7 @@ func (s *PullRequestService) CreatePullRequestWithReviewers(
     return createdPr, nil
 }
 
-func (s *PullRequestService) ReassignReviewer(
+func (s *PullRequest) ReassignReviewer(
     ctx context.Context,
     prId,
     oldUserId string,
@@ -136,7 +136,7 @@ func (s *PullRequestService) ReassignReviewer(
     return updatedPr, newUserId, nil
 }
 
-func (s *PullRequestService) Merge(ctx context.Context, prId string) (*entity.PullRequest, error) {
+func (s *PullRequest) Merge(ctx context.Context, prId string) (*entity.PullRequest, error) {
     pr, err := s.prRepository.GetByID(ctx, prId)
     if err != nil {
         return nil, fmt.Errorf("get pr: %w", err)

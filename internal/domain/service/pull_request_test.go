@@ -129,7 +129,7 @@ func TestPullRequestService_CreatePullRequestWithReviewers(t *testing.T) {
             }
 
             mockTx := &MockTransactor{}
-            svc := NewPullRequestService(mockPRRepo, mockUserRepo, mockTx)
+            svc := NewPullRequest(mockPRRepo, mockUserRepo, mockTx)
 
             pr, err := svc.CreatePullRequestWithReviewers(ctx, tt.prID, tt.prName, tt.authorID)
 
@@ -224,7 +224,7 @@ func TestPullRequestService_Merge(t *testing.T) {
             mockUserRepo := &MockUserRepository{}
             mockTx := &MockTransactor{}
 
-            svc := NewPullRequestService(mockPRRepo, mockUserRepo, mockTx)
+            svc := NewPullRequest(mockPRRepo, mockUserRepo, mockTx)
 
             pr, err := svc.Merge(ctx, tt.prID)
 
@@ -358,7 +358,7 @@ func TestPullRequestService_ReassignReviewer(t *testing.T) {
 
             mockTx := &MockTransactor{}
 
-            svc := NewPullRequestService(mockPRRepo, mockUserRepo, mockTx)
+            svc := NewPullRequest(mockPRRepo, mockUserRepo, mockTx)
 
             pr, newUserID, err := svc.ReassignReviewer(ctx, tt.prID, tt.oldUserID)
 

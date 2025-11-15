@@ -7,26 +7,27 @@ import (
     "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
 )
 
-type UserService struct {
+type User struct {
     userRepo repository.UserRepository
     prRepo   repository.PullRequestRepository
 }
 
-func NewUserService(userRepo repository.UserRepository, prRepo repository.PullRequestRepository) *UserService {
-    return &UserService{
+func NewUser(userRepo repository.UserRepository, prRepo repository.PullRequestRepository) *User {
+    return &User{
         userRepo: userRepo,
         prRepo:   prRepo,
     }
 }
 
-func (s *UserService) SetIsActive(ctx context.Context, userId string, isActive bool) error {
-    if err := s.userRepo.SetIsActive(ctx, userId, isActive); err != nil {
-        return fmt.Errorf("set user active status: %w", err)
+func (s *User) SetIsActive(ctx context.Context, userId string, isActive bool) (*entity.User, error) {
+    user, err := s.userRepo.SetIsActive(ctx, userId, isActive)
+    if err != nil {
+        return nil, fmt.Errorf("set user active status: %w", err)
     }
-    return nil
+    return user, nil
 }
 
-func (s *UserService) GetReviewAssignments(ctx context.Context, userId string) ([]*entity.PullRequest, error) {
+func (s *User) GetReviewAssignments(ctx context.Context, userId string) ([]*entity.PullRequest, error) {
     pullRequests, err := s.prRepo.GetByReviewer(ctx, userId)
     if err != nil {
         return nil, fmt.Errorf("get pull requests: %w", err)

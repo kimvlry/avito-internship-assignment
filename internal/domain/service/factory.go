@@ -3,9 +3,9 @@ package service
 import "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
 
 type Services struct {
-    TeamService        *TeamService
-    UserService        *UserService
-    PullRequestService *PullRequestService
+    TeamService        *Team
+    UserService        *User
+    PullRequestService *PullRequest
     Transactor         Transactor
 }
 
@@ -16,8 +16,8 @@ func NewServices(
     tx Transactor,
 ) *Services {
     return &Services{
-        TeamService:        NewTeamService(teamRepository, userRepository, tx),
-        UserService:        NewUserService(userRepository, pullRequestRepository),
-        PullRequestService: NewPullRequestService(pullRequestRepository, userRepository, tx),
+        TeamService:        NewTeam(teamRepository, userRepository, tx),
+        UserService:        NewUser(userRepository, pullRequestRepository),
+        PullRequestService: NewPullRequest(pullRequestRepository, userRepository, tx),
     }
 }

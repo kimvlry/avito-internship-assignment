@@ -48,19 +48,19 @@ func TestUserService_SetIsActive(t *testing.T) {
             var capturedIsActive bool
 
             mockUserRepo := &MockUserRepository{
-                SetIsActiveFunc: func(ctx context.Context, userID string, isActive bool) error {
+                SetIsActiveFunc: func(ctx context.Context, userID string, isActive bool) (*entity.User, error) {
                     setIsActiveCalled = true
                     capturedIsActive = isActive
                     assert.Equal(t, tt.userID, userID)
-                    return tt.mockError
+                    return nil, tt.mockError
                 },
             }
 
             mockPRRepo := &MockPullRequestRepository{}
 
-            svc := NewUserService(mockUserRepo, mockPRRepo)
+            svc := NewUser(mockUserRepo, mockPRRepo)
 
-            err := svc.SetIsActive(ctx, tt.userID, tt.isActive)
+            _, err := svc.SetIsActive(ctx, tt.userID, tt.isActive)
 
             if tt.expectError {
                 require.Error(t, err)
@@ -155,7 +155,7 @@ func TestUserService_GetReviewAssignments(t *testing.T) {
                 },
             }
 
-            svc := NewUserService(mockUserRepo, mockPRRepo)
+            svc := NewUser(mockUserRepo, mockPRRepo)
 
             prs, err := svc.GetReviewAssignments(ctx, tt.userID)
 
