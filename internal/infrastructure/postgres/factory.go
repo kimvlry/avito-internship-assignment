@@ -4,14 +4,13 @@ import (
     "context"
     "fmt"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
-    "github.com/kimvlry/avito-internship-assignment/internal/domain/service"
 )
 
 type Repositories struct {
     Team        repository.TeamRepository
     User        repository.UserRepository
     PullRequest repository.PullRequestRepository
-    Transactor  service.Transactor
+    Transactor  repository.Transactor
 }
 
 func NewRepositories(ctx context.Context, connString string) (*Repositories, *DB, error) {

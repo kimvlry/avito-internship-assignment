@@ -3,17 +3,16 @@ package postgres
 import (
     "context"
     "fmt"
-    "github.com/kimvlry/avito-internship-assignment/internal/domain/service"
-
     "github.com/jackc/pgx/v5"
     "github.com/jackc/pgx/v5/pgxpool"
+    "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
 )
 
 type transactor struct {
     pool *pgxpool.Pool
 }
 
-func NewTransactor(pool *pgxpool.Pool) service.Transactor {
+func NewTransactor(pool *pgxpool.Pool) repository.Transactor {
     return &transactor{pool: pool}
 }
 
