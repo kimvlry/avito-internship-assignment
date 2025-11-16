@@ -2,11 +2,13 @@ package service
 
 import (
     "context"
+    "testing"
+
     "github.com/kimvlry/avito-internship-assignment/internal/domain"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/entity"
+    "github.com/kimvlry/avito-internship-assignment/internal/domain/service/mocks"
     "github.com/stretchr/testify/assert"
     "github.com/stretchr/testify/require"
-    "testing"
 )
 
 func TestUserService_SetIsActive(t *testing.T) {
@@ -18,45 +20,20 @@ func TestUserService_SetIsActive(t *testing.T) {
         expectError     bool
         expectedErrType error
     }{
-        {
-            name:        "успешная активация пользователя",
-            userID:      "u1",
-            isActive:    true,
-            expectError: false,
-        },
-        {
-            name:        "успешная деактивация пользователя",
-            userID:      "u2",
-            isActive:    false,
-            expectError: false,
-        },
-        {
-            name:            "ошибка: пользователь не найден",
-            userID:          "u999",
-            isActive:        true,
-            mockError:       domain.ErrUserNotFound,
-            expectError:     true,
-            expectedErrType: domain.ErrUserNotFound,
-        },
+        {"успешная активация пользователя", "u1", true, nil, false, nil},
+        {"успешная деактивация пользователя", "u2", false, nil, false, nil},
+        {"ошибка: пользователь не найден", "u999", true, domain.ErrUserNotFound, true, domain.ErrUserNotFound},
     }
 
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             ctx := context.Background()
 
-            setIsActiveCalled := false
-            var capturedIsActive bool
+            mockUserRepo := mocks.NewUserRepository(t)
+            mockPRRepo := mocks.NewPullRequestRepository(t)
 
-            mockUserRepo := &MockUserRepository{
-                SetIsActiveFunc: func(ctx context.Context, userID string, isActive bool) (*entity.User, error) {
-                    setIsActiveCalled = true
-                    capturedIsActive = isActive
-                    assert.Equal(t, tt.userID, userID)
-                    return nil, tt.mockError
-                },
-            }
-
-            mockPRRepo := &MockPullRequestRepository{}
+            mockUserRepo.On("SetIsActive", ctx, tt.userID, tt.isActive).
+                Return(nil, tt.mockError)
 
             svc := NewUser(mockUserRepo, mockPRRepo)
 
@@ -64,15 +41,12 @@ func TestUserService_SetIsActive(t *testing.T) {
 
             if tt.expectError {
                 require.Error(t, err)
-                if tt.expectedErrType != nil {
-                    assert.ErrorIs(t, err, tt.expectedErrType)
-                }
+                assert.ErrorIs(t, err, tt.expectedErrType)
                 return
             }
 
             require.NoError(t, err)
-            assert.True(t, setIsActiveCalled, "SetIsActive должен быть вызван")
-            assert.Equal(t, tt.isActive, capturedIsActive, "передан правильный is_active")
+            mockUserRepo.AssertCalled(t, "SetIsActive", ctx, tt.userID, tt.isActive)
         })
     }
 }
@@ -87,52 +61,26 @@ func TestUserService_GetReviewAssignments(t *testing.T) {
         expectedErrType error
     }{
         {
-            name:   "успешное получение назначений пользователя",
-            userID: "u1",
-            mockPRs: []*entity.PullRequest{
-                {
-                    ID:                "pr-1",
-                    Name:              "Feature X",
-                    AuthorID:          "u2",
-                    Status:            entity.PROpen,
-                    AssignedReviewers: []string{"u1", "u3"},
-                },
-                {
-                    ID:                "pr-2",
-                    Name:              "Feature Y",
-                    AuthorID:          "u3",
-                    Status:            entity.PROpen,
-                    AssignedReviewers: []string{"u1"},
-                },
+            "успешное получение назначений пользователя",
+            "u1",
+            []*entity.PullRequest{
+                {ID: "pr-1", Name: "Feature X", AuthorID: "u2", Status: entity.PROpen, AssignedReviewers: []string{"u1", "u3"}},
+                {ID: "pr-2", Name: "Feature Y", AuthorID: "u3", Status: entity.PROpen, AssignedReviewers: []string{"u1"}},
             },
-            expectError: false,
+            nil, false, nil,
         },
         {
-            name:        "пустой список для пользователя без назначений",
-            userID:      "u2",
-            mockPRs:     []*entity.PullRequest{},
-            expectError: false,
+            "пустой список для пользователя без назначений",
+            "u2", []*entity.PullRequest{}, nil, false, nil,
         },
         {
-            name:   "получение назначений включая merged PR (администратор видит)",
-            userID: "u1",
-            mockPRs: []*entity.PullRequest{
-                {
-                    ID:                "pr-1",
-                    Name:              "Feature X",
-                    AuthorID:          "u2",
-                    Status:            entity.PROpen,
-                    AssignedReviewers: []string{"u1"},
-                },
-                {
-                    ID:                "pr-2",
-                    Name:              "Feature Y",
-                    AuthorID:          "u3",
-                    Status:            entity.PRMerged,
-                    AssignedReviewers: []string{"u1"},
-                },
+            "получение назначений включая merged PR (администратор видит)",
+            "u1",
+            []*entity.PullRequest{
+                {ID: "pr-1", Name: "Feature X", AuthorID: "u2", Status: entity.PROpen, AssignedReviewers: []string{"u1"}},
+                {ID: "pr-2", Name: "Feature Y", AuthorID: "u3", Status: entity.PRMerged, AssignedReviewers: []string{"u1"}},
             },
-            expectError: false,
+            nil, false, nil,
         },
     }
 
@@ -140,20 +88,10 @@ func TestUserService_GetReviewAssignments(t *testing.T) {
         t.Run(tt.name, func(t *testing.T) {
             ctx := context.Background()
 
-            getByReviewerCalled := false
+            mockUserRepo := mocks.NewUserRepository(t)
+            mockPRRepo := mocks.NewPullRequestRepository(t)
 
-            mockUserRepo := &MockUserRepository{}
-
-            mockPRRepo := &MockPullRequestRepository{
-                GetByReviewerFunc: func(ctx context.Context, userID string) ([]*entity.PullRequest, error) {
-                    getByReviewerCalled = true
-                    assert.Equal(t, tt.userID, userID)
-                    if tt.mockError != nil {
-                        return nil, tt.mockError
-                    }
-                    return tt.mockPRs, nil
-                },
-            }
+            mockPRRepo.On("GetByReviewer", ctx, tt.userID).Return(tt.mockPRs, tt.mockError)
 
             svc := NewUser(mockUserRepo, mockPRRepo)
 
@@ -161,14 +99,12 @@ func TestUserService_GetReviewAssignments(t *testing.T) {
 
             if tt.expectError {
                 require.Error(t, err)
-                if tt.expectedErrType != nil {
-                    assert.ErrorIs(t, err, tt.expectedErrType)
-                }
+                assert.ErrorIs(t, err, tt.expectedErrType)
                 return
             }
 
             require.NoError(t, err)
-            assert.True(t, getByReviewerCalled, "GetByReviewer должен быть вызван")
+            mockPRRepo.AssertCalled(t, "GetByReviewer", ctx, tt.userID)
             assert.Len(t, prs, len(tt.mockPRs))
 
             for _, pr := range prs {

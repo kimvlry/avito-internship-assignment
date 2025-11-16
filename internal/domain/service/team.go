@@ -11,11 +11,11 @@ import (
 type Team struct {
     teamRepository repository.TeamRepository
     userRepository repository.UserRepository
-    tx             Transactor
+    tx             repository.Transactor
 }
 
 func NewTeam(teamRepo repository.TeamRepository, userRepo repository.UserRepository,
-    tx Transactor) *Team {
+    tx repository.Transactor) *Team {
     return &Team{
         teamRepository: teamRepo,
         userRepository: userRepo,

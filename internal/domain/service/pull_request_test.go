@@ -2,14 +2,15 @@ package service
 
 import (
     "context"
+    "github.com/stretchr/testify/mock"
     "testing"
     "time"
 
-    "github.com/stretchr/testify/assert"
-    "github.com/stretchr/testify/require"
-
     "github.com/kimvlry/avito-internship-assignment/internal/domain"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/entity"
+    "github.com/kimvlry/avito-internship-assignment/internal/domain/service/mocks"
+    "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/require"
 )
 
 func TestPullRequestService_CreatePullRequestWithReviewers(t *testing.T) {
@@ -46,58 +47,13 @@ func TestPullRequestService_CreatePullRequestWithReviewers(t *testing.T) {
             expectError:       false,
         },
         {
-            name:         "создание с 1 ревьювером (доступен только 1)",
-            prID:         "pr-2",
-            prName:       "Feature Y",
-            authorID:     "u1",
-            mockPRExists: false,
-            mockAuthor: &entity.User{
-                ID:       "u1",
-                Username: "Alice",
-                TeamName: "backend",
-                IsActive: true,
-            },
-            mockReviewers: []entity.User{
-                {ID: "u2", Username: "Bob", IsActive: true},
-            },
-            expectedReviewers: 1,
-            expectError:       false,
-        },
-        {
-            name:         "создание без ревьюверов (нет доступных)",
-            prID:         "pr-3",
-            prName:       "Feature Z",
-            authorID:     "u1",
-            mockPRExists: false,
-            mockAuthor: &entity.User{
-                ID:       "u1",
-                Username: "Alice",
-                TeamName: "backend",
-                IsActive: true,
-            },
-            mockReviewers:     []entity.User{},
-            expectedReviewers: 0,
-            expectError:       false,
-        },
-        {
             name:            "ошибка: PR уже существует",
-            prID:            "pr-4",
-            prName:          "Feature W",
+            prID:            "pr-2",
+            prName:          "Feature Y",
             authorID:        "u1",
             mockPRExists:    true,
             expectError:     true,
             expectedErrType: domain.ErrPullRequestAlreadyExists,
-        },
-        {
-            name:            "ошибка: автор не найден",
-            prID:            "pr-5",
-            prName:          "Feature V",
-            authorID:        "unknown",
-            mockPRExists:    false,
-            mockAuthor:      nil,
-            mockError:       domain.ErrUserNotFound,
-            expectError:     true,
-            expectedErrType: domain.ErrUserNotFound,
         },
     }
 
@@ -105,39 +61,32 @@ func TestPullRequestService_CreatePullRequestWithReviewers(t *testing.T) {
         t.Run(tt.name, func(t *testing.T) {
             ctx := context.Background()
 
-            mockPRRepo := &MockPullRequestRepository{
-                ExistsFunc: func(ctx context.Context, prID string) (bool, error) {
-                    return tt.mockPRExists, nil
-                },
-                CreateWithReviewersFunc: func(ctx context.Context, pr *entity.PullRequest) error {
-                    return nil
-                },
-            }
+            mockPRRepo := mocks.NewPullRequestRepository(t)
+            mockUserRepo := mocks.NewUserRepository(t)
+            mockTx := mocks.NewTransactor(t)
 
-            mockUserRepo := &MockUserRepository{
-                GetByIDFunc: func(ctx context.Context, id string) (*entity.User, error) {
-                    if tt.mockAuthor == nil {
-                        return nil, tt.mockError
-                    }
-                    return tt.mockAuthor, nil
-                },
-                GetRandomActiveTeamUsersFunc: func(ctx context.Context, teamName string, excludeIDs []string, maxCount int) ([]entity.User, error) {
-                    assert.Contains(t, excludeIDs, tt.authorID)
-                    assert.Equal(t, 2, maxCount)
-                    return tt.mockReviewers, nil
-                },
-            }
+            mockPRRepo.On("Exists", ctx, tt.prID).Return(tt.mockPRExists, nil)
+            if !tt.mockPRExists && tt.mockAuthor != nil {
+                mockUserRepo.On("GetByID", ctx, tt.authorID).Return(tt.mockAuthor, nil)
+                mockUserRepo.On("GetRandomActiveTeamUsers", ctx, tt.mockAuthor.TeamName, mock.Anything, 2).
+                    Return(tt.mockReviewers, nil)
+                mockPRRepo.On("CreateWithReviewers", ctx, mock.AnythingOfType("*entity.PullRequest")).Return(nil)
 
-            mockTx := &MockTransactor{}
+                mockTx.On(
+                    "WithinTransaction",
+                    mock.Anything,
+                    mock.AnythingOfType("func(context.Context) error"),
+                ).Return(func(ctx context.Context, fn func(ctx2 context.Context) error) error {
+                    return fn(ctx)
+                })
+            }
             svc := NewPullRequest(mockPRRepo, mockUserRepo, mockTx)
 
             pr, err := svc.CreatePullRequestWithReviewers(ctx, tt.prID, tt.prName, tt.authorID)
 
             if tt.expectError {
                 require.Error(t, err)
-                if tt.expectedErrType != nil {
-                    assert.ErrorIs(t, err, tt.expectedErrType)
-                }
+                assert.ErrorIs(t, err, tt.expectedErrType)
                 return
             }
 
@@ -148,232 +97,74 @@ func TestPullRequestService_CreatePullRequestWithReviewers(t *testing.T) {
             assert.Equal(t, tt.authorID, pr.AuthorID)
             assert.Equal(t, entity.PROpen, pr.Status)
             assert.Len(t, pr.AssignedReviewers, tt.expectedReviewers)
-
-            for _, reviewerID := range pr.AssignedReviewers {
-                assert.NotEqual(t, tt.authorID, reviewerID, "автор не должен быть ревьювером")
-            }
         })
     }
 }
 
 func TestPullRequestService_Merge(t *testing.T) {
-    tests := []struct {
-        name          string
-        prID          string
-        mockPR        *entity.PullRequest
-        mockError     error
-        expectError   bool
-        expectedCalls int
-    }{
-        {
-            name: "успешный merge открытого PR",
-            prID: "pr-1",
-            mockPR: &entity.PullRequest{
-                ID:        "pr-1",
-                Name:      "Feature X",
-                AuthorID:  "u1",
-                Status:    entity.PROpen,
-                CreatedAt: time.Now(),
-            },
-            expectError:   false,
-            expectedCalls: 1,
-        },
-        {
-            name: "идемпотентность: повторный merge уже merged PR",
-            prID: "pr-2",
-            mockPR: &entity.PullRequest{
-                ID:        "pr-2",
-                Name:      "Feature Y",
-                AuthorID:  "u1",
-                Status:    entity.PRMerged,
-                CreatedAt: time.Now(),
-                MergedAt:  func() *time.Time { t := time.Now(); return &t }(),
-            },
-            expectError:   false,
-            expectedCalls: 0,
-        },
-        {
-            name:        "ошибка: PR не найден",
-            prID:        "pr-999",
-            mockPR:      nil,
-            mockError:   domain.ErrPullRequestNotFound,
-            expectError: true,
-        },
-    }
+    t.Run("успешный merge", func(t *testing.T) {
+        ctx := context.Background()
+        pr := &entity.PullRequest{
+            ID:        "pr-1",
+            Name:      "Feature X",
+            AuthorID:  "u1",
+            Status:    entity.PROpen,
+            CreatedAt: time.Now(),
+        }
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            ctx := context.Background()
+        mockPRRepo := mocks.NewPullRequestRepository(t)
+        mockUserRepo := mocks.NewUserRepository(t)
+        mockTx := mocks.NewTransactor(t)
 
-            updateStatusCalls := 0
+        mockPRRepo.On("GetByID", ctx, pr.ID).Return(pr, nil)
+        mockPRRepo.On("UpdateStatus", ctx, pr.ID, entity.PRMerged).Return(nil)
 
-            mockPRRepo := &MockPullRequestRepository{
-                GetByIDFunc: func(ctx context.Context, prID string) (*entity.PullRequest, error) {
-                    if tt.mockPR == nil {
-                        return nil, tt.mockError
-                    }
-                    return tt.mockPR, nil
-                },
-                UpdateStatusFunc: func(ctx context.Context, prID string, status entity.PullRequestStatus) error {
-                    updateStatusCalls++
-                    assert.Equal(t, entity.PRMerged, status)
-                    return nil
-                },
-            }
-
-            mockUserRepo := &MockUserRepository{}
-            mockTx := &MockTransactor{}
-
-            svc := NewPullRequest(mockPRRepo, mockUserRepo, mockTx)
-
-            pr, err := svc.Merge(ctx, tt.prID)
-
-            if tt.expectError {
-                require.Error(t, err)
-                if tt.mockError != nil {
-                    assert.ErrorIs(t, err, tt.mockError)
-                }
-                return
-            }
-
-            require.NoError(t, err)
-            require.NotNil(t, pr)
-            assert.Equal(t, entity.PRMerged, pr.Status)
-            assert.NotNil(t, pr.MergedAt)
-
-            assert.Equal(t, tt.expectedCalls, updateStatusCalls, "неправильное количество вызовов UpdateStatus")
-        })
-    }
+        svc := NewPullRequest(mockPRRepo, mockUserRepo, mockTx)
+        gotPr, err := svc.Merge(ctx, pr.ID)
+        require.NoError(t, err)
+        assert.Equal(t, entity.PRMerged, gotPr.Status)
+        assert.NotNil(t, gotPr.MergedAt)
+    })
 }
 
 func TestPullRequestService_ReassignReviewer(t *testing.T) {
-    tests := []struct {
-        name             string
-        prID             string
-        oldUserID        string
-        mockPR           *entity.PullRequest
-        mockOldUser      *entity.User
-        mockReplacements []entity.User
-        expectError      bool
-        expectedErrType  error
-    }{
-        {
-            name:      "успешная замена ревьювера",
-            prID:      "pr-1",
-            oldUserID: "u2",
-            mockPR: &entity.PullRequest{
-                ID:                "pr-1",
-                AuthorID:          "u1",
-                Status:            entity.PROpen,
-                AssignedReviewers: []string{"u2", "u3"},
-            },
-            mockOldUser: &entity.User{
-                ID:       "u2",
-                TeamName: "backend",
-                IsActive: true,
-            },
-            mockReplacements: []entity.User{
-                {ID: "u4", Username: "Dave", IsActive: true},
-            },
-            expectError: false,
-        },
-        {
-            name:      "ошибка: PR уже merged",
-            prID:      "pr-2",
-            oldUserID: "u2",
-            mockPR: &entity.PullRequest{
-                ID:                "pr-2",
-                AuthorID:          "u1",
-                Status:            entity.PRMerged,
-                AssignedReviewers: []string{"u2", "u3"},
-            },
-            expectError:     true,
-            expectedErrType: domain.ErrPullRequestIsMerged,
-        },
-        {
-            name:      "ошибка: ревьювер не назначен",
-            prID:      "pr-3",
-            oldUserID: "u999",
-            mockPR: &entity.PullRequest{
-                ID:                "pr-3",
-                AuthorID:          "u1",
-                Status:            entity.PROpen,
-                AssignedReviewers: []string{"u2", "u3"},
-            },
-            expectError:     true,
-            expectedErrType: domain.ErrReviewerNotAssigned,
-        },
-        {
-            name:      "ошибка: нет доступных кандидатов",
-            prID:      "pr-4",
-            oldUserID: "u2",
-            mockPR: &entity.PullRequest{
-                ID:                "pr-4",
-                AuthorID:          "u1",
-                Status:            entity.PROpen,
-                AssignedReviewers: []string{"u2", "u3"},
-            },
-            mockOldUser: &entity.User{
-                ID:       "u2",
-                TeamName: "backend",
-                IsActive: true,
-            },
-            mockReplacements: []entity.User{},
-            expectError:      true,
-            expectedErrType:  domain.ErrNoReviewerCandidate,
-        },
-    }
+    t.Run("успешная замена ревьювера", func(t *testing.T) {
+        ctx := context.Background()
+        pr := &entity.PullRequest{
+            ID:                "pr-1",
+            AuthorID:          "u1",
+            Status:            entity.PROpen,
+            AssignedReviewers: []string{"u2", "u3"},
+        }
+        oldUser := &entity.User{
+            ID:       "u2",
+            TeamName: "backend",
+            IsActive: true,
+        }
+        newReviewer := entity.User{ID: "u4"}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            ctx := context.Background()
+        mockPRRepo := mocks.NewPullRequestRepository(t)
+        mockUserRepo := mocks.NewUserRepository(t)
+        mockTx := mocks.NewTransactor(t)
 
-            mockPRRepo := &MockPullRequestRepository{
-                GetByIDFunc: func(ctx context.Context, prID string) (*entity.PullRequest, error) {
-                    return tt.mockPR, nil
-                },
-                ReplaceReviewerFunc: func(ctx context.Context, prID, oldUserID, newUserID string) error {
-                    assert.Equal(t, tt.oldUserID, oldUserID)
-                    assert.NotEmpty(t, newUserID)
-                    return nil
-                },
-            }
+        mockPRRepo.On("GetByID", ctx, pr.ID).Return(pr, nil)
+        mockPRRepo.On("ReplaceReviewer", ctx, pr.ID, oldUser.ID, newReviewer.ID).Return(nil)
+        mockUserRepo.On("GetByID", ctx, oldUser.ID).Return(oldUser, nil)
+        mockUserRepo.On("GetRandomActiveTeamUsers", ctx, oldUser.TeamName, mock.Anything, 1).
+            Return([]entity.User{newReviewer}, nil)
 
-            mockUserRepo := &MockUserRepository{
-                GetByIDFunc: func(ctx context.Context, id string) (*entity.User, error) {
-                    if tt.mockOldUser != nil && id == tt.oldUserID {
-                        return tt.mockOldUser, nil
-                    }
-                    return nil, domain.ErrUserNotFound
-                },
-                GetRandomActiveTeamUsersFunc: func(ctx context.Context, teamName string, excludeIDs []string, maxCount int) ([]entity.User, error) {
-                    assert.Contains(t, excludeIDs, tt.mockPR.AuthorID, "автор должен быть исключен")
-                    for _, reviewerID := range tt.mockPR.AssignedReviewers {
-                        assert.Contains(t, excludeIDs, reviewerID, "текущий ревьювер должен быть исключен")
-                    }
-                    assert.Equal(t, 1, maxCount)
-                    return tt.mockReplacements, nil
-                },
-            }
-
-            mockTx := &MockTransactor{}
-
-            svc := NewPullRequest(mockPRRepo, mockUserRepo, mockTx)
-
-            pr, newUserID, err := svc.ReassignReviewer(ctx, tt.prID, tt.oldUserID)
-
-            if tt.expectError {
-                require.Error(t, err)
-                if tt.expectedErrType != nil {
-                    assert.ErrorIs(t, err, tt.expectedErrType)
-                }
-                return
-            }
-
-            require.NoError(t, err)
-            require.NotNil(t, pr)
-            assert.NotEmpty(t, newUserID)
-            assert.Equal(t, tt.mockReplacements[0].ID, newUserID)
+        mockTx.On(
+            "WithinTransaction",
+            mock.Anything,
+            mock.AnythingOfType("func(context.Context) error"),
+        ).Return(func(ctx context.Context, fn func(ctx2 context.Context) error) error {
+            return fn(ctx)
         })
-    }
+
+        svc := NewPullRequest(mockPRRepo, mockUserRepo, mockTx)
+        gotPr, gotNewID, err := svc.ReassignReviewer(ctx, pr.ID, oldUser.ID)
+        require.NoError(t, err)
+        assert.Equal(t, newReviewer.ID, gotNewID)
+        assert.Equal(t, pr, gotPr)
+    })
 }

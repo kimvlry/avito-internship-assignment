@@ -6,14 +6,14 @@ type Services struct {
     TeamService        *Team
     UserService        *User
     PullRequestService *PullRequest
-    Transactor         Transactor
+    Transactor         repository.Transactor
 }
 
 func NewServices(
     teamRepository repository.TeamRepository,
     userRepository repository.UserRepository,
     pullRequestRepository repository.PullRequestRepository,
-    tx Transactor,
+    tx repository.Transactor,
 ) *Services {
     return &Services{
         TeamService:        NewTeam(teamRepository, userRepository, tx),

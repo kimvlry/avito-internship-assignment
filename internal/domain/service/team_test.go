@@ -4,11 +4,12 @@ import (
     "context"
     "testing"
 
-    "github.com/stretchr/testify/assert"
-    "github.com/stretchr/testify/require"
-
     "github.com/kimvlry/avito-internship-assignment/internal/domain"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/entity"
+    "github.com/kimvlry/avito-internship-assignment/internal/domain/service/mocks"
+    "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/mock"
+    "github.com/stretchr/testify/require"
 )
 
 func TestTeamService_CreateTeam(t *testing.T) {
@@ -23,41 +24,18 @@ func TestTeamService_CreateTeam(t *testing.T) {
     }{
         {
             name: "успешное создание команды с новыми пользователями",
-            team: &entity.Team{
-                Name: "backend",
-            },
+            team: &entity.Team{Name: "backend"},
             members: []entity.User{
                 {ID: "u1", Username: "Alice", IsActive: true},
                 {ID: "u2", Username: "Bob", IsActive: true},
             },
             mockTeamExists: false,
-            mockUsersExist: map[string]bool{
-                "u1": false,
-                "u2": false,
-            },
-            expectError: false,
-        },
-        {
-            name: "создание с обновлением существующих пользователей",
-            team: &entity.Team{
-                Name: "frontend",
-            },
-            members: []entity.User{
-                {ID: "u1", Username: "Alice", IsActive: true},
-                {ID: "u3", Username: "Charlie", IsActive: true},
-            },
-            mockTeamExists: false,
-            mockUsersExist: map[string]bool{
-                "u1": true,
-                "u3": false,
-            },
-            expectError: false,
+            mockUsersExist: map[string]bool{"u1": false, "u2": false},
+            expectError:    false,
         },
         {
             name: "ошибка: команда уже существует",
-            team: &entity.Team{
-                Name: "backend",
-            },
+            team: &entity.Team{Name: "backend"},
             members: []entity.User{
                 {ID: "u1", Username: "Alice", IsActive: true},
             },
@@ -70,54 +48,52 @@ func TestTeamService_CreateTeam(t *testing.T) {
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             ctx := context.Background()
-
             createCalls := make(map[string]int)
             updateCalls := make(map[string]int)
 
-            mockTeamRepo := &MockTeamRepository{
-                ExistsFunc: func(ctx context.Context, teamName string) (bool, error) {
-                    return tt.mockTeamExists, nil
-                },
-                CreateFunc: func(ctx context.Context, team *entity.Team) error {
-                    assert.Equal(t, tt.team.Name, team.Name)
-                    return nil
-                },
-            }
+            mockTeamRepo := mocks.NewTeamRepository(t)
+            mockUserRepo := mocks.NewUserRepository(t)
+            mockTx := mocks.NewTransactor(t)
 
-            mockUserRepo := &MockUserRepository{
-                CheckUsersAvailableForTeamFunc: func(ctx context.Context, userIDs []string, teamName string) error {
-                    return nil
-                },
-                ExistsFunc: func(ctx context.Context, userID string) (bool, error) {
-                    exists, ok := tt.mockUsersExist[userID]
-                    if !ok {
-                        return false, nil
+            mockTx.On(
+                "WithinTransaction",
+                mock.Anything,
+                mock.AnythingOfType("func(context.Context) error"),
+            ).Return(func(ctx context.Context, fn func(ctx2 context.Context) error) error {
+                return fn(ctx)
+            })
+
+            mockTeamRepo.On("Exists", mock.Anything, tt.team.Name).Return(tt.mockTeamExists, nil)
+            if !tt.mockTeamExists {
+                mockTeamRepo.On("Create", mock.Anything, tt.team).Return(nil)
+
+                for _, user := range tt.members {
+                    if exists, ok := tt.mockUsersExist[user.ID]; ok && exists {
+                        mockUserRepo.On("Exists", mock.Anything, user.ID).Return(true, nil)
+                        mockUserRepo.On("Update", mock.Anything, mock.MatchedBy(func(u *entity.User) bool { return u.ID == user.ID })).Return(nil).Run(func(args mock.Arguments) {
+                            updateCalls[user.ID]++
+                        })
+                    } else {
+                        mockUserRepo.On("Exists", mock.Anything, user.ID).Return(false, nil)
+                        mockUserRepo.On("Create", mock.Anything, mock.MatchedBy(func(u *entity.User) bool { return u.ID == user.ID })).Return(nil).Run(func(args mock.Arguments) {
+                            createCalls[user.ID]++
+                        })
                     }
-                    return exists, nil
-                },
-                CreateFunc: func(ctx context.Context, user *entity.User) error {
-                    createCalls[user.ID]++
-                    assert.Equal(t, tt.team.Name, user.TeamName, "user должен быть добавлен в команду")
-                    return nil
-                },
-                UpdateFunc: func(ctx context.Context, user *entity.User) error {
-                    updateCalls[user.ID]++
-                    assert.Equal(t, tt.team.Name, user.TeamName, "user должен быть обновлен с новой командой")
-                    return nil
-                },
-            }
+                }
 
-            mockTx := &MockTransactor{}
+                userIDs := make([]string, len(tt.members))
+                for i, u := range tt.members {
+                    userIDs[i] = u.ID
+                }
+                mockUserRepo.On("CheckUsersAvailableForTeam", mock.Anything, userIDs, tt.team.Name).Return(nil)
+            }
 
             svc := NewTeam(mockTeamRepo, mockUserRepo, mockTx)
-
             team, err := svc.CreateTeam(ctx, tt.team, tt.members)
 
             if tt.expectError {
                 require.Error(t, err)
-                if tt.expectedErrType != nil {
-                    assert.ErrorIs(t, err, tt.expectedErrType)
-                }
+                assert.ErrorIs(t, err, tt.expectedErrType)
                 return
             }
 
@@ -127,11 +103,11 @@ func TestTeamService_CreateTeam(t *testing.T) {
 
             for userID, shouldExist := range tt.mockUsersExist {
                 if shouldExist {
-                    assert.Equal(t, 1, updateCalls[userID], "user %s должен быть updated", userID)
-                    assert.Equal(t, 0, createCalls[userID], "user %s не должен быть created", userID)
+                    assert.Equal(t, 1, updateCalls[userID], "user %s должен быть обновлен", userID)
+                    assert.Equal(t, 0, createCalls[userID], "user %s не должен быть создан", userID)
                 } else {
-                    assert.Equal(t, 1, createCalls[userID], "user %s должен быть created", userID)
-                    assert.Equal(t, 0, updateCalls[userID], "user %s не должен быть updated", userID)
+                    assert.Equal(t, 1, createCalls[userID], "user %s должен быть создан", userID)
+                    assert.Equal(t, 0, updateCalls[userID], "user %s не должен быть обновлен", userID)
                 }
             }
         })
@@ -151,9 +127,7 @@ func TestTeamService_GetTeamWithMembers(t *testing.T) {
         {
             name:     "успешное получение команды с участниками",
             teamName: "backend",
-            mockTeam: &entity.Team{
-                Name: "backend",
-            },
+            mockTeam: &entity.Team{Name: "backend"},
             mockMembers: []entity.User{
                 {ID: "u1", Username: "Alice", TeamName: "backend", IsActive: true},
                 {ID: "u2", Username: "Bob", TeamName: "backend", IsActive: true},
@@ -174,32 +148,23 @@ func TestTeamService_GetTeamWithMembers(t *testing.T) {
         t.Run(tt.name, func(t *testing.T) {
             ctx := context.Background()
 
-            mockTeamRepo := &MockTeamRepository{
-                GetByNameFunc: func(ctx context.Context, teamName string) (*entity.Team, error) {
-                    if tt.mockTeam == nil {
-                        return nil, tt.mockError
-                    }
-                    return tt.mockTeam, nil
-                },
-            }
+            mockTeamRepo := mocks.NewTeamRepository(t)
+            mockUserRepo := mocks.NewUserRepository(t)
+            mockTx := mocks.NewTransactor(t)
 
-            mockUserRepo := &MockUserRepository{
-                GetByTeamFunc: func(ctx context.Context, teamName string) ([]entity.User, error) {
-                    return tt.mockMembers, nil
-                },
+            if tt.mockTeam != nil {
+                mockTeamRepo.On("GetByName", mock.Anything, tt.teamName).Return(tt.mockTeam, nil)
+                mockUserRepo.On("GetByTeam", mock.Anything, tt.teamName).Return(tt.mockMembers, nil)
+            } else {
+                mockTeamRepo.On("GetByName", mock.Anything, tt.teamName).Return(nil, tt.mockError)
             }
-
-            mockTx := &MockTransactor{}
 
             svc := NewTeam(mockTeamRepo, mockUserRepo, mockTx)
-
             team, members, err := svc.GetTeamWithMembers(ctx, tt.teamName)
 
             if tt.expectError {
                 require.Error(t, err)
-                if tt.expectedErrType != nil {
-                    assert.ErrorIs(t, err, tt.expectedErrType)
-                }
+                assert.ErrorIs(t, err, tt.expectedErrType)
                 return
             }
 

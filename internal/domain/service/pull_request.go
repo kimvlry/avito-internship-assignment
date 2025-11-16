@@ -12,13 +12,13 @@ import (
 type PullRequest struct {
     prRepository   repository.PullRequestRepository
     userRepository repository.UserRepository
-    tx             Transactor
+    tx             repository.Transactor
 }
 
 func NewPullRequest(
     prRepo repository.PullRequestRepository,
     userRepo repository.UserRepository,
-    tx Transactor,
+    tx repository.Transactor,
 ) *PullRequest {
     return &PullRequest{
         prRepository:   prRepo,
