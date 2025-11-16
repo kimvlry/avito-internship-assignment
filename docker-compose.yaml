@@ -51,6 +51,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      APP_MODE: "dev"
       POSTGRES_USER: ${POSTGRES_USER:-user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pass}
       POSTGRES_DB: ${POSTGRES_DB:-avito-fall-2025}
