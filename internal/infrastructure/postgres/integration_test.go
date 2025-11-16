@@ -2,6 +2,7 @@ package postgres_test
 
 import (
     "context"
+    "github.com/kimvlry/avito-internship-assignment/internal/domain"
     "os"
     "testing"
 
@@ -120,10 +121,10 @@ func TestRepositories(t *testing.T) {
         assert.True(t, exists)
 
         err = teamRepo.Create(ctx, team)
-        assert.ErrorIs(t, err, postgres.ErrTeamAlreadyExists)
+        assert.ErrorIs(t, err, domain.ErrTeamAlreadyExists)
 
         _, err = teamRepo.GetByName(ctx, "nonexistent")
-        assert.ErrorIs(t, err, postgres.ErrTeamNotFound)
+        assert.ErrorIs(t, err, domain.ErrTeamNotFound)
     })
 
     t.Run("UserRepository", func(t *testing.T) {

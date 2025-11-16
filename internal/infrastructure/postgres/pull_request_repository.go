@@ -5,6 +5,7 @@ import (
     "errors"
     "fmt"
     "github.com/jackc/pgx/v5"
+    "github.com/kimvlry/avito-internship-assignment/internal/domain"
 
     "github.com/kimvlry/avito-internship-assignment/internal/domain/entity"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
@@ -46,13 +47,10 @@ func (r *pullRequestRepository) CreateWithReviewers(
 
     if err != nil {
         if isPgUniqueViolation(err) {
-            return ErrPullRequestAlreadyExists
+            return domain.ErrPullRequestAlreadyExists
         }
         if isPgForeignKeyViolation(err) {
-            return ErrUserNotFound
-        }
-        if isPgCheckViolation(err) {
-            return ErrTooManyReviewers
+            return domain.ErrUserNotFound
         }
         return fmt.Errorf("exec create pr with reviewers: %w", err)
     }
@@ -97,7 +95,7 @@ func (r *pullRequestRepository) GetByID(
 
     if err != nil {
         if errors.Is(err, pgx.ErrNoRows) {
-            return nil, ErrPullRequestNotFound
+            return nil, domain.ErrPullRequestNotFound
         }
         return nil, fmt.Errorf("query pr by id: %w", err)
     }
@@ -142,7 +140,7 @@ func (r *pullRequestRepository) UpdateStatus(
     }
 
     if result.RowsAffected() == 0 {
-        return ErrPullRequestNotFound
+        return domain.ErrPullRequestNotFound
     }
 
     return nil
@@ -167,17 +165,14 @@ func (r *pullRequestRepository) ReplaceReviewer(
 
     result, err := querier.Exec(ctx, query, prID, oldUserID, newUserID)
     if err != nil {
-        if isPgCheckViolation(err) {
-            return ErrTooManyReviewers
-        }
         if isPgForeignKeyViolation(err) {
-            return ErrUserNotFound
+            return domain.ErrUserNotFound
         }
         return fmt.Errorf("exec replace reviewer: %w", err)
     }
 
     if result.RowsAffected() == 0 {
-        return ErrReviewerNotAssigned
+        return domain.ErrReviewerNotAssigned
     }
 
     return nil

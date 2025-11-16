@@ -5,6 +5,7 @@ import (
     "errors"
     "fmt"
     "github.com/jackc/pgx/v5"
+    "github.com/kimvlry/avito-internship-assignment/internal/domain"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/entity"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
 )
@@ -28,7 +29,7 @@ func (r *teamRepository) Create(ctx context.Context, team *entity.Team) error {
     _, err := querier.Exec(ctx, query, team.Name)
     if err != nil {
         if isPgUniqueViolation(err) {
-            return ErrTeamAlreadyExists
+            return domain.ErrTeamAlreadyExists
         }
         return fmt.Errorf("exec create team: %w", err)
     }
@@ -51,7 +52,7 @@ func (r *teamRepository) GetByName(ctx context.Context, name string) (*entity.Te
 
     if err != nil {
         if errors.Is(err, pgx.ErrNoRows) {
-            return nil, ErrTeamNotFound
+            return nil, domain.ErrTeamNotFound
         }
         return nil, fmt.Errorf("query team by name: %w", err)
     }

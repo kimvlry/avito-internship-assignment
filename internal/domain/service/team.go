@@ -38,6 +38,10 @@ func (s *Team) CreateTeam(ctx context.Context, team *entity.Team, members []enti
             return domain.ErrTeamAlreadyExists
         }
 
+        if err := s.teamRepository.Create(txCtx, team); err != nil {
+            return fmt.Errorf("create team: %w", err)
+        }
+
         if err := s.userRepository.CheckUsersAvailableForTeam(txCtx, userIDs, team.Name); err != nil {
             return err
         }
@@ -61,16 +65,18 @@ func (s *Team) CreateTeam(ctx context.Context, team *entity.Team, members []enti
                 }
             }
         }
-
-        if err := s.teamRepository.Create(txCtx, team); err != nil {
-            return fmt.Errorf("create team: %w", err)
-        }
         return nil
     })
 
     if err != nil {
         return nil, err
     }
+
+    members, err = s.userRepository.GetByTeam(ctx, team.Name)
+    if err != nil {
+        return nil, err
+    }
+    team.Members = members
     return team, nil
 }
 

@@ -6,6 +6,7 @@ import (
     "fmt"
     "github.com/Masterminds/squirrel"
     "github.com/jackc/pgx/v5"
+    "github.com/kimvlry/avito-internship-assignment/internal/domain"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/entity"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
 )
@@ -38,7 +39,7 @@ func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
             return ErrUserAlreadyExists
         }
         if isPgForeignKeyViolation(err) {
-            return ErrTeamNotFound
+            return domain.ErrTeamNotFound
         }
         return fmt.Errorf("exec create user: %w", err)
     }
@@ -64,13 +65,13 @@ func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 
     if err != nil {
         if isPgForeignKeyViolation(err) {
-            return ErrTeamNotFound
+            return domain.ErrTeamNotFound
         }
         return fmt.Errorf("exec update user: %w", err)
     }
 
     if result.RowsAffected() == 0 {
-        return ErrUserNotFound
+        return domain.ErrUserNotFound
     }
 
     return nil
@@ -95,7 +96,7 @@ func (r *userRepository) GetByID(ctx context.Context, id string) (*entity.User, 
 
     if err != nil {
         if errors.Is(err, pgx.ErrNoRows) {
-            return nil, ErrUserNotFound
+            return nil, domain.ErrUserNotFound
         }
         return nil, fmt.Errorf("query user by id: %w", err)
     }
@@ -132,15 +133,15 @@ func (r *userRepository) SetIsActive(ctx context.Context, id string, isActive bo
     var u entity.User
     querier := r.db.GetQuerier(ctx)
 
-    err := querier.QueryRow(ctx, query, id).Scan(
+    err := querier.QueryRow(ctx, query, id, isActive).Scan(
         &u.ID,
         &u.Username,
         &u.TeamName,
-        &isActive,
+        &u.IsActive,
     )
     if err != nil {
         if errors.Is(err, pgx.ErrNoRows) {
-            return nil, ErrUserNotFound
+            return nil, domain.ErrUserNotFound
         }
         return nil, fmt.Errorf("exec set is_active: %w", err)
     }
@@ -172,7 +173,7 @@ func (r *userRepository) GetRandomActiveTeamUsers(
     maxCount int,
 ) ([]entity.User, error) {
     qb := r.db.QueryBuilder().
-        Select("user_id", "username", "team_name", "is_active", "created_at").
+        Select("user_id", "username", "team_name", "is_active").
         From("users").
         Where(squirrel.Eq{
             "team_name": teamName,
