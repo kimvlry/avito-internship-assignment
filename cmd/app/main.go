@@ -7,6 +7,7 @@ import (
     "github.com/kimvlry/avito-internship-assignment/internal/delivery/http/handler"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/service"
     "github.com/kimvlry/avito-internship-assignment/internal/infrastructure/postgres"
+    "github.com/kimvlry/avito-internship-assignment/pkg/logger"
     "log"
     "os"
     "os/signal"
@@ -16,15 +17,21 @@ import (
 
 func main() {
     ctx := context.Background()
-
     cfg, err := app.LoadConfig()
     if err != nil {
         log.Fatalf("load config: %v", err)
     }
 
+    logger.Init(cfg.AppMode)
+    logger.Info(ctx, "Starting application",
+        "mode", cfg.AppMode,
+        "port", cfg.Http.Port,
+    )
+
     repos, db, err := postgres.NewRepositories(ctx, cfg.Postgres.GetConnString())
     if err != nil {
-        log.Fatalf("failed to create repos and connect to db: %v", err)
+        logger.Error(ctx, "failed to create repos and connect to db: %v", err)
+        os.Exit(1)
     }
     defer repos.Close(db)
 
@@ -35,7 +42,8 @@ func main() {
 
     go func() {
         if err := server.Start(); err != nil {
-            log.Fatalf("failed to start server: %v", err)
+            logger.Error(ctx, "failed to start server: %v", err)
+            os.Exit(1)
         }
     }()
 
@@ -49,7 +57,8 @@ func main() {
     defer shutdownCancel()
 
     if err := server.Shutdown(shutdownCtx); err != nil {
-        log.Fatalf("failed to shutdown server: %v", err)
+        logger.Error(ctx, "failed to shutdown server: %v", err)
+        os.Exit(1)
     }
-    log.Println("Server gracefully stopped")
+    logger.Info(ctx, "Server gracefully stopped")
 }
