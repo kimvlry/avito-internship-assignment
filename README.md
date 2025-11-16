@@ -28,6 +28,7 @@
 
 1. настройки линтеров с хуками находятся в [.golangci.yml](./.golangci.yml), [lefthook.yml](./lefthook.yml)
 2. добавлен эндпоинт статистики `/stats/assignments` и его документация в [openapi.yaml](./api/openapi.yaml)
+3. интеграционные тесты для инфраструктуры Postgres
 
 ---
 
