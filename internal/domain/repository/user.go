@@ -11,7 +11,7 @@ type UserRepository interface {
     Exists(ctx context.Context, id string) (bool, error)
     GetByID(ctx context.Context, id string) (*entity.User, error)
     GetByTeam(ctx context.Context, teamName string) ([]entity.User, error)
-    SetIsActive(ctx context.Context, id string, isActive bool) error
+    SetIsActive(ctx context.Context, id string, isActive bool) (*entity.User, error)
     GetRandomActiveTeamUsers(
         ctx context.Context,
         teamName string,

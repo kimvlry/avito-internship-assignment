@@ -12,10 +12,10 @@ import (
 )
 
 type pullRequestHandler struct {
-    svc service.PullRequest
+    svc *service.PullRequest
 }
 
-func NewPullRequestHandler(svc service.PullRequest) PullRequestHandler {
+func newPullRequestHandler(svc *service.PullRequest) *pullRequestHandler {
     return &pullRequestHandler{svc: svc}
 }
 

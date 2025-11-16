@@ -5,10 +5,12 @@ import (
     "github.com/go-playground/validator/v10"
     "github.com/ilyakaznacheev/cleanenv"
     "github.com/joho/godotenv"
+    "time"
 )
 
 type Config struct {
     Postgres PostgresConfig
+    Http     HttpConfig
 }
 
 type PostgresConfig struct {
@@ -18,6 +20,18 @@ type PostgresConfig struct {
     Password string `env:"PG_PASSWORD" env-default:"pass" validate:"required"`
     DBName   string `env:"PG_DB" env-default:"avito-fall-2025" validate:"required"`
     SSLMode  string `env:"PG_SSLMODE" env-default:"disable" validate:"oneof=disable allow prefer require verify-ca verify-full"`
+}
+
+type HttpConfig struct {
+    Port         string        `env:"HTTP_PORT" validate:"required"`
+    ReadTimeout  time.Duration `env:"HTTP_READ_TIMEOUT" env-default:"5s" validate:"required"`
+    WriteTimeout time.Duration `env:"HTTP_WRITE_TIMEOUT" env-default:"5s" validate:"required"`
+    IdleTimeout  time.Duration `env:"HTTP_IDLE_TIMEOUT" env-default:"5s" validate:"required"`
+    JwtSecret    string        `env:"JWT_SECRET" validate:"required"`
+}
+
+func (h HttpConfig) Addr() string {
+    return ":" + h.Port
 }
 
 func LoadConfig() (*Config, error) {

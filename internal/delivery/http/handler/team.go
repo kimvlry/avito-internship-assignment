@@ -13,10 +13,10 @@ import (
 )
 
 type teamHandler struct {
-    svc service.Team
+    svc *service.Team
 }
 
-func NewTeamHandler(s service.Team) TeamHandler {
+func newTeamHandler(s *service.Team) *teamHandler {
     return &teamHandler{svc: s}
 }
 
