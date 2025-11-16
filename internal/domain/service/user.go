@@ -5,6 +5,7 @@ import (
     "fmt"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/entity"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
+    "github.com/kimvlry/avito-internship-assignment/pkg/logger"
 )
 
 type User struct {
@@ -30,7 +31,16 @@ func (s *User) SetIsActive(ctx context.Context, userId string, isActive bool) (*
 func (s *User) GetReviewAssignments(ctx context.Context, userId string) ([]*entity.PullRequest, error) {
     pullRequests, err := s.prRepo.GetByReviewer(ctx, userId)
     if err != nil {
-        return nil, fmt.Errorf("get pull requests: %w", err)
+        logger.Error(ctx, fmt.Sprintf("get pull requests: %s", userId), err)
+        return nil, err
     }
     return pullRequests, nil
+}
+
+func (s *User) GetByID(ctx context.Context, userID string) (*entity.User, error) {
+    user, err := s.userRepo.GetByID(ctx, userID)
+    if err != nil {
+        return nil, fmt.Errorf("get user by id: %w", err)
+    }
+    return user, nil
 }

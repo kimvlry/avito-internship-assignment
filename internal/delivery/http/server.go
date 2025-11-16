@@ -6,7 +6,7 @@ import (
     "errors"
     "fmt"
     "github.com/kimvlry/avito-internship-assignment/internal/app"
-    "log"
+    "github.com/kimvlry/avito-internship-assignment/pkg/logger"
     "net/http"
     "time"
 
@@ -37,7 +37,7 @@ func NewServer(cfg app.HttpConfig, handlers *handler.Handlers) *Server {
 }
 
 func (s *Server) Start() error {
-    log.Printf("Starting HTTP server on %s", s.srv.Addr)
+    logger.Info(context.Background(), fmt.Sprintf("Starting HTTP server on %s", s.srv.Addr))
     if err := s.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
         return fmt.Errorf("http server error: %w", err)
     }
@@ -45,11 +45,11 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-    log.Println("Shutting down HTTP server...")
+    logger.Info(context.Background(), "Shutting down HTTP server...")
     if err := s.srv.Shutdown(ctx); err != nil {
         return fmt.Errorf("http server shutdown failed: %w", err)
     }
-    log.Println("HTTP server stopped")
+    logger.Info(context.Background(), "HTTP server stopped")
     return nil
 }
 

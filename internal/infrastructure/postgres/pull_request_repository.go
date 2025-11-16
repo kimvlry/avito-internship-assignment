@@ -6,6 +6,7 @@ import (
     "fmt"
     "github.com/jackc/pgx/v5"
     "github.com/kimvlry/avito-internship-assignment/internal/domain"
+    "github.com/kimvlry/avito-internship-assignment/pkg/logger"
 
     "github.com/kimvlry/avito-internship-assignment/internal/domain/entity"
     "github.com/kimvlry/avito-internship-assignment/internal/domain/repository"
@@ -201,16 +202,20 @@ func (r *pullRequestRepository) GetByReviewer(
 		)
 		GROUP BY pr.pull_request_id
 	`
+    logger.Debug(ctx, "executing GetByReview query")
 
     querier := r.db.GetQuerier(ctx)
 
     rows, err := querier.Query(ctx, query, userID)
     if err != nil {
-        return nil, fmt.Errorf("query prs by reviewer: %w", err)
+        logger.Error(ctx, fmt.Sprintf("query prs by reviewer: %s", userID), err)
+        return nil, err
     }
     defer rows.Close()
 
-    return scanPullRequests(rows)
+    prs, err := scanPullRequests(rows)
+    logger.Debug(ctx, fmt.Sprintf("rows affected by GetByReview query: %v", len(prs)))
+    return prs, err
 }
 
 func scanPullRequests(rows pgx.Rows) ([]*entity.PullRequest, error) {

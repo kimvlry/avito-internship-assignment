@@ -80,6 +80,7 @@ func TestTeamService_CreateTeam(t *testing.T) {
                         })
                     }
                 }
+                mockUserRepo.On("GetByTeam", mock.Anything, tt.team.Name).Return([]entity.User{}, nil)
 
                 userIDs := make([]string, len(tt.members))
                 for i, u := range tt.members {

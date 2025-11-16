@@ -12,3 +12,7 @@ func Info(ctx context.Context, msg string, args ...any) {
 func Error(ctx context.Context, msg string, args ...any) {
     slog.ErrorContext(ctx, msg, args...)
 }
+
+func Debug(ctx context.Context, msg string, args ...any) {
+    slog.DebugContext(ctx, msg, args...)
+}

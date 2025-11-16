@@ -8,7 +8,3 @@ import (
 func IsAdmin(ctx context.Context) bool {
     return middleware.IsAdmin(ctx)
 }
-
-func IsAdminOrOwner(ctx context.Context, ownerID string) bool {
-    return middleware.IsAdmin(ctx) || middleware.GetUserID(ctx) == ownerID
-}

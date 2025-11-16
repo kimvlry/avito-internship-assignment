@@ -2,6 +2,7 @@ package handler
 
 import (
     "context"
+    "github.com/kimvlry/avito-internship-assignment/pkg/logger"
 
     "github.com/kimvlry/avito-internship-assignment/api"
     "github.com/kimvlry/avito-internship-assignment/internal/delivery/http/constructor"
@@ -50,7 +51,22 @@ func (h *userHandler) GetUsersGetReview(
     req api.GetUsersGetReviewRequestObject,
 ) (api.GetUsersGetReviewResponseObject, error) {
 
-    if !check.IsAdminOrOwner(ctx, req.Params.UserId) {
+    ctx = logger.NewBuilder(ctx).
+        WithMethod("GetUsersGetReview").
+        WithEntityID(req.Params.UserId).
+        Build()
+
+    u, err := h.svc.GetByID(ctx, req.Params.UserId)
+    if err != nil {
+        logger.Debug(ctx, "GetUsersGetReview", "err", err)
+        return api.GetUsersGetReview200JSONResponse{
+            UserId:       req.Params.UserId,
+            PullRequests: []api.PullRequestShort{},
+        }, nil
+    }
+
+    if !check.CanViewUserAssignments(ctx, u.IsActive) {
+        logger.Debug(ctx, "GetUsersGetReview", "user", u, "isActive", u.IsActive)
         return api.GetUsersGetReview200JSONResponse{
             UserId:       req.Params.UserId,
             PullRequests: []api.PullRequestShort{},
