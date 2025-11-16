@@ -9,6 +9,8 @@ import (
 )
 
 type Config struct {
+    AppMode string `env:"APP_MODE" env-default:"dev"`
+
     Postgres PostgresConfig
     Http     HttpConfig
 }
