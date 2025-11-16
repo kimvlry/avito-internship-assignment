@@ -95,8 +95,8 @@ func setupRouter(jwtSecret string, handlers *handler.Handlers) http.Handler {
                 })
             },
         ))
+        r.Get("/stats/assignments", strictHandler.GetStatsAssignments)
     })
-
     return r
 }
 
@@ -140,7 +140,6 @@ func handleGetWithQuery[T any](
             }
             return
         }
-
         writeError(w, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "unknown response type")
     }
 }

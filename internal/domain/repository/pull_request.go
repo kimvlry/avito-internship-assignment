@@ -12,4 +12,5 @@ type PullRequestRepository interface {
     UpdateStatus(ctx context.Context, prId string, status entity.PullRequestStatus) error
     GetByReviewer(ctx context.Context, userId string) ([]*entity.PullRequest, error)
     ReplaceReviewer(ctx context.Context, prId, oldUserId, newUserId string) error
+    GetAll(ctx context.Context) ([]*entity.PullRequest, error)
 }

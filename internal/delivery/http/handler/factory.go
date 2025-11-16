@@ -10,6 +10,7 @@ type Handlers struct {
     *pullRequestHandler
     *teamHandler
     *userHandler
+    *statsHandler
 }
 
 var _ api.StrictServerInterface = (*Handlers)(nil)
@@ -19,5 +20,6 @@ func NewHandlers(services *service.Services) *Handlers {
         newPullRequestHandler(services.PullRequestService),
         newTeamHandler(services.TeamService),
         newUserHandler(services.UserService),
+        newStatsHandler(services.StatsService),
     }
 }

@@ -244,3 +244,27 @@ func scanPullRequests(rows pgx.Rows) ([]*entity.PullRequest, error) {
 
     return prs, nil
 }
+
+func (r *pullRequestRepository) GetAll(ctx context.Context) ([]*entity.PullRequest, error) {
+    query := `
+        SELECT 
+            pr.pull_request_id,
+            pr.pull_request_name,
+            pr.author_id,
+            pr.status,
+            pr.created_at,
+            pr.merged_at,
+            array_agg(prr.reviewer_id) as reviewers
+        FROM pull_requests pr
+        LEFT JOIN pull_request_reviewers prr ON pr.pull_request_id = prr.pull_request_id
+        GROUP BY pr.pull_request_id
+    `
+
+    rows, err := r.db.GetQuerier(ctx).Query(ctx, query)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    return scanPullRequests(rows)
+}
