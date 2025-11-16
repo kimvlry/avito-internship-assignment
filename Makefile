@@ -7,7 +7,7 @@ up:
 	@echo "  make token-user"
 
 down:
-	@echo "Stopping docker container..."
+	@echo "остановка docker контейнера..."
 	docker-compose down
 
 #------------------------------------
@@ -23,23 +23,16 @@ token-user:
 INTEGRATION_LOGS ?= 0
 
 test:
-	@echo "Running all tests..."
+	@echo "запуск всех тестов..."
 	@INTEGRATION_LOGS=0 go test -race -v -cover ./...
 
 repositories_integration_test:
-	@echo "Running integration tests for Postgres repos with logs..."
+	@echo "запуск интеграционного теста postgres репозиториев..."
 	@INTEGRATION_LOGS=1 go test -race -v -cover ./internal/infrastructure/postgres/...
 
 #------------------------------------
 generate:
-	@echo "Generating code from OpenAPI spec..."
+	@echo "генерация кода api с помощью oapi-codegen..."
 	oapi-codegen -config api/oapi-codegen.yaml api/openapi.yaml
 	go mod tidy
-	@echo "Code generated"
-
-generate-check:
-	@echo "Checking if generated code is up to date..."
-	oapi-codegen -config api/oapi-codegen.yaml api/openapi.yaml > /tmp/generated.go
-	diff api/generated.go /tmp/generated.go || \
-		(echo "Generated code is outdated. Run 'make generate'" && exit 1)
-	@echo "Generated code is up to date"
+	@echo "готово"
