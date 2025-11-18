@@ -2,13 +2,13 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pass}
-      POSTGRES_DB: ${POSTGRES_DB:-avito-fall-2025}
+      POSTGRES_USER: ${POSTGRES_USER-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD-pass}
+      POSTGRES_DB: ${POSTGRES_DB-avito-fall-2025}
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "5432:5432"
     networks:
       - app
     restart: always
@@ -19,13 +19,12 @@ services:
       retries: 5
       start_period: 5s
 
-
   migrate:
     image: migrate/migrate:latest
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pass}
-      POSTGRES_DB: ${POSTGRES_DB:-avito-fall-2025}
+      POSTGRES_USER: ${POSTGRES_USER-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD-pass}
+      POSTGRES_DB: ${POSTGRES_DB-avito-fall-2025}
     depends_on:
       db:
         condition: service_healthy
@@ -52,23 +51,23 @@ services:
         condition: service_healthy
     environment:
       APP_MODE: "dev"
-      POSTGRES_USER: ${POSTGRES_USER:-user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pass}
-      POSTGRES_DB: ${POSTGRES_DB:-avito-fall-2025}
+      POSTGRES_USER: ${POSTGRES_USER-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD-pass}
+      POSTGRES_DB: ${POSTGRES_DB-avito-fall-2025}
 
       PG_HOST: "db"
       PG_PORT: "5432"
-      PG_USER: ${POSTGRES_USER:-user}
-      PG_PASSWORD: ${POSTGRES_PASSWORD:-pass}
-      PG_DB: ${POSTGRES_DB:-avito-fall-2025}
+      PG_USER: ${POSTGRES_USER-user}
+      PG_PASSWORD: ${POSTGRES_PASSWORD-pass}
+      PG_DB: ${POSTGRES_DB-avito-fall-2025}
       PG_SSLMODE: "disable"
 
       HTTP_PORT: "8080"
-      HTTP_READ_TIMEOUT: ${HTTP_READ_TIMEOUT:-5s}
-      HTTP_WRITE_TIMEOUT: ${HTTP_WRITE_TIMEOUT:-5s}
-      HTTP_IDLE_TIMEOUT: ${HTTP_IDLE_TIMEOUT:-30s}
+      HTTP_READ_TIMEOUT: ${HTTP_READ_TIMEOUT-5s}
+      HTTP_WRITE_TIMEOUT: ${HTTP_WRITE_TIMEOUT-5s}
+      HTTP_IDLE_TIMEOUT: ${HTTP_IDLE_TIMEOUT-30s}
 
-      JWT_SECRET: ${JWT_SECRET:-there-definitely-should-not-be-default-value-but-for-demonstration-simplicity-its-there}
+      JWT_SECRET: ${JWT_SECRET-there-definitely-should-not-be-default-value-but-for-demonstration-simplicity-its-there}
 
     ports:
       - "8080:8080"
