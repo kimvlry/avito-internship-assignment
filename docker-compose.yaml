@@ -13,7 +13,7 @@ services:
       - app
     restart: always
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER-user} -d ${POSTGRES_DB-avito-fall-2025}" ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -21,10 +21,6 @@ services:
 
   migrate:
     image: migrate/migrate:latest
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER-user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD-pass}
-      POSTGRES_DB: ${POSTGRES_DB-avito-fall-2025}
     depends_on:
       db:
         condition: service_healthy
@@ -34,7 +30,7 @@ services:
       - app
     command: [
       "-path", "/migrations",
-      "-database", "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable",
+      "-database", "postgres://${POSTGRES_USER-user}:${POSTGRES_PASSWORD-pass}@db:5432/${POSTGRES_DB-avito-fall-2025}?sslmode=disable",
       "up"
     ]
     restart: on-failure
@@ -50,19 +46,18 @@ services:
       db:
         condition: service_healthy
     environment:
-      APP_MODE: "dev"
+      APP_MODE: ${APP_MODE-dev}
+
       POSTGRES_USER: ${POSTGRES_USER-user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD-pass}
       POSTGRES_DB: ${POSTGRES_DB-avito-fall-2025}
 
-      PG_HOST: "db"
-      PG_PORT: "5432"
-      PG_USER: ${POSTGRES_USER-user}
-      PG_PASSWORD: ${POSTGRES_PASSWORD-pass}
-      PG_DB: ${POSTGRES_DB-avito-fall-2025}
-      PG_SSLMODE: "disable"
+      PG_HOST: ${PG_HOST-db}
+      PG_USER: ${PG_USER-user}
+      PG_PASSWORD: ${PG_PASSWORD-pass}
+      PG_DB: ${PG_DB-avito-fall-2025}
+      PG_SSLMODE: ${PG_SSLMODE-disable}
 
-      HTTP_PORT: "8080"
       HTTP_READ_TIMEOUT: ${HTTP_READ_TIMEOUT-5s}
       HTTP_WRITE_TIMEOUT: ${HTTP_WRITE_TIMEOUT-5s}
       HTTP_IDLE_TIMEOUT: ${HTTP_IDLE_TIMEOUT-30s}
@@ -75,7 +70,7 @@ services:
       - app
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "$${HTTP_PORT}" ]
+      test: [ "CMD", "nc", "-z", "localhost", "8080" ]
       interval: 10s
       timeout: 3s
       retries: 5
